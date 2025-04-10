@@ -1,0 +1,40 @@
+resource "aws_iam_policy" "s3_upload_policy" {
+  name        = var.policy_name
+  description = "Policy for secure S3 multipart uploads"
+  policy      = data.aws_iam_policy_document.s3_upload_policy.json
+}
+
+data "aws_iam_policy_document" "s3_upload_policy" {
+  statement {
+    sid    = "AllowS3Upload"
+    effect = "Allow"
+    actions = [
+      "s3:PutObject",
+      "s3:GetObject",
+      "s3:DeleteObject",
+      "s3:ListBucket",
+      "s3:AbortMultipartUpload",
+      "s3:ListMultipartUploadParts",
+      "s3:ListBucketMultipartUploads"
+    ]
+    resources = [
+      "arn:aws:s3:::${var.bucket_name}",
+      "arn:aws:s3:::${var.bucket_name}/*"
+    ]
+  }
+
+  statement {
+    sid    = "AllowKMSUsage"
+    effect = "Allow"
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+      "kms:ReEncrypt*",
+      "kms:GenerateDataKey*",
+      "kms:DescribeKey"
+    ]
+    resources = [
+      var.kms_key_arn
+    ]
+  }
+}
