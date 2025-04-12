@@ -4,10 +4,15 @@ variable "aws_region" {
   default     = "us-east-1"
 }
 
-variable "bucket_prefix" {
-  default = "secure-bucket"
-}
+# variable "bucket_prefix" {
+#   default = "secure-bucket"
+# }
+
+# variable "account_id" {
+#   default = ""
+# }
 
 locals {
-  bucket_name = "${var.bucket_prefix}-${random_id.suffix.hex}"
+  bucket_name   = "secure-bucket-${random_id.suffix.hex}"
+  policy_suffix = random_id.suffix.hex
 }

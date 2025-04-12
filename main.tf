@@ -7,18 +7,20 @@ resource "random_id" "suffix" {
 
 # 1. Create KMS module
 module "kms" {
-  source         = "./modules/kms"
-  key_alias      = "secure-uploads-key"
+  source          = "./modules/kms"
+  key_alias       = "secure-uploads-key"
   upload_role_arn = module.iam_role.role_arn
   deletion_window = 30
 }
 
 # 2. Create S3 bucket
 module "s3" {
-  source            = "./modules/s3"
-  bucket_name       = local.bucket_name
-  kms_key_arn       = module.kms.key_arn
+  source             = "./modules/s3"
+  bucket_name        = local.bucket_name
+  kms_key_arn        = module.kms.key_arn
   versioning_enabled = true
+  expiration_days    = 2
+  allowed_user_agent = "secure_uploader"
 }
 
 # 3. Create the base IAM policy
@@ -31,10 +33,12 @@ module "iam_policy" {
 
 # 4. Create IAM role
 module "iam_role" {
-  source          = "./modules/iam_role"
-  role_name       = "${local.bucket_name}-upload-role"
-  policy_arn      = module.iam_policy.policy_arn
+  source           = "./modules/iam_role"
+  role_name        = "${local.bucket_name}-upload-role"
+  policy_arn       = module.iam_policy.policy_arn
   trusted_services = ["lambda.amazonaws.com"]
+  # trusted_principals = ["arn:aws:iam::${var.account_id}:user/joshua"]
+  # allowed_ips     = ["192.0.2.0/24"]
 }
 
 # 5. Update KMS policy to include the role ARN
@@ -76,53 +80,55 @@ data "aws_caller_identity" "current" {}
 # 6. Create role-specific policies
 module "admin_policy" {
   source           = "./modules/iam_policy"
-  policy_name      = "${local.bucket_name}-admin-policy"
+  policy_name      = "${local.bucket_name}-admin-policy-${local.policy_suffix}"
   bucket_name      = module.s3.bucket_name
   kms_key_arn      = module.kms.key_arn
   permission_level = "admin"
+  # allowed_ips     = ["192.0.2.0/24"]
 }
 
-module "uploader_policy" {
+module "editor_policy" {
   source           = "./modules/iam_policy"
-  policy_name      = "${local.bucket_name}-uploader-policy"
+  policy_name      = "${local.bucket_name}-editor-policy"
   bucket_name      = module.s3.bucket_name
   kms_key_arn      = module.kms.key_arn
-  permission_level = "uploader"
+  permission_level = "editor"
+  # allowed_ips      = ["192.0.2.0/24"]
 }
 
-module "viewer_policy" {
-  source           = "./modules/iam_policy"
-  policy_name      = "${local.bucket_name}-viewer-policy"
-  bucket_name      = module.s3.bucket_name
-  kms_key_arn      = module.kms.key_arn
-  permission_level = "viewer"
-}
+# module "viewer_policy" {
+#   source           = "./modules/iam_policy"
+#   policy_name      = "${local.bucket_name}-viewer-policy"
+#   bucket_name      = module.s3.bucket_name
+#   kms_key_arn      = module.kms.key_arn
+#   permission_level = "viewer"
+# }
 
 # Create users
 resource "aws_iam_user" "admin_user" {
   name = "${local.bucket_name}-admin"
 }
 
-resource "aws_iam_user" "uploader_user" {
-  name = "${local.bucket_name}-uploader"
+resource "aws_iam_user" "editor_user" {
+  name = "${local.bucket_name}-editor"
 }
 
-resource "aws_iam_user" "viewer_user" {
-  name = "${local.bucket_name}-viewer"
-}
+# resource "aws_iam_user" "viewer_user" {
+#   name = "${local.bucket_name}-viewer"
+# }
 
 # Create access keys
 resource "aws_iam_access_key" "admin_user" {
   user = aws_iam_user.admin_user.name
 }
 
-resource "aws_iam_access_key" "uploader_user" {
-  user = aws_iam_user.uploader_user.name
+resource "aws_iam_access_key" "editor_user" {
+  user = aws_iam_user.editor_user.name
 }
 
-resource "aws_iam_access_key" "viewer_user" {
-  user = aws_iam_user.viewer_user.name
-}
+# resource "aws_iam_access_key" "viewer_user" {
+#   user = aws_iam_user.viewer_user.name
+# }
 
 # Attach policies
 resource "aws_iam_user_policy_attachment" "admin_policy" {
@@ -130,12 +136,12 @@ resource "aws_iam_user_policy_attachment" "admin_policy" {
   policy_arn = module.admin_policy.policy_arn
 }
 
-resource "aws_iam_user_policy_attachment" "uploader_policy" {
-  user       = aws_iam_user.uploader_user.name
-  policy_arn = module.uploader_policy.policy_arn
+resource "aws_iam_user_policy_attachment" "editor_policy" {
+  user       = aws_iam_user.editor_user.name
+  policy_arn = module.editor_policy.policy_arn
 }
 
-resource "aws_iam_user_policy_attachment" "viewer_policy" {
-  user       = aws_iam_user.viewer_user.name
-  policy_arn = module.viewer_policy.policy_arn
-}
+# resource "aws_iam_user_policy_attachment" "viewer_policy" {
+#   user       = aws_iam_user.viewer_user.name
+#   policy_arn = module.viewer_policy.policy_arn
+# }
