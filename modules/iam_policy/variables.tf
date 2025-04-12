@@ -13,11 +13,11 @@ variable "kms_key_arn" {
 }
 
 variable "permission_level" {
-  description = "Permission level (admin, uploader, or viewer)"
+  description = "Permission level (admin, editor)"
   type        = string
-  default     = "uploader"
+  default     = "admin"
   validation {
-    condition     = contains(["admin", "uploader", "viewer"], var.permission_level)
-    error_message = "Permission level must be one of: admin, uploader, viewer"
+    condition     = contains(["admin", "editor"], var.permission_level)
+    error_message = "Permission level must be one of: admin, editor"
   }
 }

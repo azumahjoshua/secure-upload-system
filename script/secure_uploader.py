@@ -1,9 +1,59 @@
-# import boto3
-# import os
-# import math
-# from datetime import datetime, timedelta
+#!/usr/bin/env python3
+import boto3
+import os
+import sys
+from datetime import datetime, timedelta
+from botocore.exceptions import ClientError, NoCredentialsError
 
-# DEFAULT_CHUNK_SIZE = 50 * 1024 * 1024  # 50MB chunks
+# Configuration - Load from environment variables
+BUCKET_NAME = os.getenv('S3_BUCKET_NAME')
+KMS_KEY_ARN = os.getenv('AWS_KMS_KEY_ARN')
+ALLOWED_USERS = [
+    os.getenv('ADMIN_USER_ARN'),  # Set these in your environment
+    os.getenv('EDITOR_USER_ARN')  # or replace with actual ARNs
+]
+
+def verify_uploader_identity():
+    """Verify the AWS user matches our Terraform-created users"""
+    sts = boto3.client('sts')
+    try:
+        identity = sts.get_caller_identity()
+
+        if identity['Arn'] not in ALLOWED_USERS:
+            print(f"❌ ERROR: Unauthorized user: {identity['Arn']}")
+            print("Allowed users:")
+            for user in ALLOWED_USERS:
+                print(f" - {user}")
+            sys.exit(1)
+
+        print(f"✅ Verified identity: {identity['Arn']}")
+        return identity
+
+    except (ClientError, NoCredentialsError) as e:
+        print(f"🚨 AWS Authentication Error: {str(e)}")
+        sys.exit(1)
+if __name__ == "__main__":
+    # Check environment variables
+    if not all([BUCKET_NAME, KMS_KEY_ARN, all(ALLOWED_USERS)]):
+        print("Missing required environment variables:")
+        print(" - S3_BUCKET_NAME")
+        print(" - AWS_KMS_KEY_ARN")
+        print(" - ADMIN_USER_ARN")
+        print(" - EDITOR_USER_ARN")
+        sys.exit(1)
+
+    if len(sys.argv) < 2:
+        print(f"Usage: {sys.argv[0]} <file_path> [expiry_hours]")
+        sys.exit(1)
+
+    file_path = sys.argv[1]
+    expires_hours = int(sys.argv[2]) if len(sys.argv) > 2 else 1
+
+    result = secure_upload(file_path, expires_hours)
+
+    print("\n🔗 Presigned URL (expires at {}):".format(result['expires_at']))
+    print(result['url'])
+    print("\nℹ️ Object Key:", result['object_key'])
 
 # def multipart_upload(file_path, bucket, key, credentials, chunk_size=DEFAULT_CHUNK_SIZE):
 #     s3 = boto3.client(

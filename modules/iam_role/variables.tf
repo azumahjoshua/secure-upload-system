@@ -9,7 +9,14 @@ variable "policy_arn" {
 }
 
 variable "trusted_services" {
-  description = "List of AWS services that can assume this role"
+  description = "List of AWS service principals that can assume this role (e.g., ec2.amazonaws.com, lambda.amazonaws.com)"
   type        = list(string)
-  default     = ["ec2.amazonaws.com", "lambda.amazonaws.com"]
+  default     = []
 }
+
+variable "trusted_principals" {
+  description = "List of IAM principals (users or roles) that can assume this role (ARN format: arn:aws:iam::ACCOUNT_ID:user/USERNAME)"
+  type        = list(string)
+  default     = []
+}
+

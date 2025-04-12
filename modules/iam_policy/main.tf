@@ -1,3 +1,7 @@
+resource "random_id" "suffix" {
+  byte_length = 4
+}
+
 locals {
   policy_statements = {
     admin = [
@@ -12,7 +16,7 @@ locals {
         ]
       }
     ],
-    uploader = [
+    editor = [
       {
         sid    = "AllowS3Upload"
         effect = "Allow"
@@ -41,30 +45,30 @@ locals {
         ]
         resources = [var.kms_key_arn]
       }
-    ],
-    viewer = [
-      {
-        sid    = "AllowS3View"
-        effect = "Allow"
-        actions = [
-          "s3:GetObject",
-          "s3:ListBucket"
-        ]
-        resources = [
-          "arn:aws:s3:::${var.bucket_name}",
-          "arn:aws:s3:::${var.bucket_name}/*"
-        ]
-      },
-      {
-        sid    = "AllowKMSDecrypt"
-        effect = "Allow"
-        actions = [
-          "kms:Decrypt",
-          "kms:DescribeKey"
-        ]
-        resources = [var.kms_key_arn]
-      }
     ]
+    # viewer = [
+    #   {
+    #     sid    = "AllowS3View"
+    #     effect = "Allow"
+    #     actions = [
+    #       "s3:GetObject",
+    #       "s3:ListBucket"
+    #     ]
+    #     resources = [
+    #       "arn:aws:s3:::${var.bucket_name}",
+    #       "arn:aws:s3:::${var.bucket_name}/*"
+    #     ]
+    #   },
+    #   {
+    #     sid    = "AllowKMSDecrypt"
+    #     effect = "Allow"
+    #     actions = [
+    #       "kms:Decrypt",
+    #       "kms:DescribeKey"
+    #     ]
+    #     resources = [var.kms_key_arn]
+    #   }
+    # ]
   }
 }
 
@@ -81,7 +85,10 @@ data "aws_iam_policy_document" "combined" {
 }
 
 resource "aws_iam_policy" "s3_upload_policy" {
-  name        = "${var.bucket_name}-${var.permission_level}-policy"
+  name        = "${var.bucket_name}-${var.permission_level}-policy-${random_id.suffix.hex}"
   description = "S3 access policy for ${var.permission_level} role"
   policy      = data.aws_iam_policy_document.combined.json
+  lifecycle {
+    create_before_destroy = true
+  }
 }

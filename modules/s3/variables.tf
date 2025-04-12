@@ -13,7 +13,11 @@ variable "versioning_enabled" {
   type        = bool
   default     = false
 }
-
+variable "allowed_user_agent" {
+  description = "User agent string to restrict presigned URL access"
+  type        = string
+  default     = "secure_uploader"
+}
 variable "expiration_days" {
   description = "Number of days after which objects expire (null for no expiration)"
   type        = number
