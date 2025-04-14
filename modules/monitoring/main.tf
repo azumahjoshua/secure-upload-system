@@ -6,7 +6,7 @@ resource "aws_cloudwatch_log_group" "s3_access_logs" {
 
 resource "aws_cloudwatch_log_metric_filter" "unauthorized_access" {
   name           = "${var.bucket_name}-UnauthorizedAccessAttempts"
-  pattern        = "([errorCode] = \"AccessDenied\" || [errorCode] = \"UnauthorizedOperation\")"
+  pattern = "{ ($.errorCode = \"AccessDenied\" || $.errorCode = \"UnauthorizedOperation\") }"
   log_group_name = aws_cloudwatch_log_group.s3_access_logs.name
 
   metric_transformation {
@@ -38,7 +38,7 @@ resource "aws_cloudwatch_metric_alarm" "unauthorized_access_alarm" {
 # Optional: Add additional alarms for other suspicious activities
 resource "aws_cloudwatch_log_metric_filter" "suspicious_operations" {
   name           = "${var.bucket_name}-SuspiciousOperations"
-  pattern        = "($.eventName = \"DeleteBucket\" || $.eventName = \"PutBucketPolicy\" || $.eventName = \"PutBucketAcl\")"
+  pattern = "{ ($.eventName = \"DeleteBucket\" || $.eventName = \"PutBucketPolicy\" || $.eventName = \"PutBucketAcl\") }"
   log_group_name = aws_cloudwatch_log_group.s3_access_logs.name
 
   metric_transformation {
