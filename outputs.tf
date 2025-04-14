@@ -28,6 +28,21 @@ output "admin_user_arn" {
 output "editor_user_arn" {
   value = aws_iam_user.editor_user.arn
 }
+
+output "security_alarms" {
+  description = "Security monitoring resources"
+  value       = module.monitoring.*
+  sensitive   = true
+}
+
+output "sns_topic_arn" {
+  description = "ARN of the SNS topic for security alerts"
+  value       = aws_sns_topic.security_alerts.arn
+}
+
+# output "transfer_acceleration_status" {
+#   value = aws_s3_bucket.upload_bucket.acceleration_status
+# }
 # output "viewer_credentials" {
 #   value = {
 #     access_key = aws_iam_access_key.viewer_user.id
